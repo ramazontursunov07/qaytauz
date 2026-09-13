@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Sparkles, ChevronRight } from "lucide-react";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -8,7 +9,7 @@ const COLORS = {
   line: "#E1DACB",
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_URL;
 
 // Sarlavha bo'yicha kategoriyani taxminlash uchun kalit so'zlar jadvali.
 const CATEGORY_KEYWORDS = [
