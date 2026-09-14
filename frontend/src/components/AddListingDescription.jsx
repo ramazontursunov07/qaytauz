@@ -8,7 +8,7 @@ const COLORS = {
   chipBg: "#F1F1F1",
 };
 
-cohttp://localhost:8000nst MAX_LENGTH = 1000;
+const MAX_LENGTH = 1000;
 
 export default function AddListingDescription() {
   const navigate = useNavigate();
