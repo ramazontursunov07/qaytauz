@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star } from "lucide-react";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -11,7 +12,7 @@ const COLORS = {
   ink: "#1F2A1E",
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_URL;
 
 function authHeaders() {
   const token = localStorage.getItem("access_token");

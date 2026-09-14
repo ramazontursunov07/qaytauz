@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pin, ShieldCheck, User, MoreVertical } from "lucide-react";
 import BottomNav from "./BottomNav";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -10,7 +11,7 @@ const COLORS = {
   cream: "#FAF6EE",
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_URL;
 
 function authHeaders() {
   const token = localStorage.getItem("access_token");

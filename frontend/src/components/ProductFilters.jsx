@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Navigation } from "lucide-react";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -60,7 +61,7 @@ export default function ProductFilters() {
   const [ordering, setOrdering] = useState(prevFilters.ordering || "");
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/products/categories/")
+    fetch(`${API_URL}/api/products/categories/`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setCategories(data.results || data))
       .catch(() => {});

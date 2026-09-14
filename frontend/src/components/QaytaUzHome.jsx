@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import BottomNav from "./BottomNav";
 import LocationPicker from "./LocationPicker";
 import { API_BASE, authFetch, isLoggedIn, requireLogin } from "../utils/auth";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -82,7 +83,7 @@ export default function QaytaUzHome() {
   }, [routerLocation.state]);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/products/categories/")
+    fetch(`${API_URL}/api/products/categories/`)
       .then((res) => {
         if (!res.ok) throw new Error("Kategoriyalarni yuklab bo'lmadi");
         return res.json();

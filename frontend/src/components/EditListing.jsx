@@ -11,7 +11,7 @@ const COLORS = {
   ink: "#1F2A1E",
   chipBg: "#F1F1F1",
   chipActive: "#1A1A1A",
-  page: "#F5F5F5",
+  page: "#F5F5F5",http://localhost:8000
 };
 
 const MAX_IMAGES = 10;

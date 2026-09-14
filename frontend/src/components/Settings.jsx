@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, SlidersHorizontal, ChevronRight } from "lucide-react";
 import FeedSettingsModal from "./FeedSettingsModal";
+import { API_URL } from "../config";
 
 const COLORS = {
   ink: "#1A1A1A",
@@ -12,7 +13,7 @@ const COLORS = {
 };
 
 const APP_VERSION = "1.0.0";
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_URL;
 
 function authHeaders() {
   const token = localStorage.getItem("access_token");

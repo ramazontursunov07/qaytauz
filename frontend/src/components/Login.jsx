@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { User, Lock, Mail, Phone, Eye, EyeOff } from "lucide-react";
 import { setTokens } from "../utils/auth";
+import { API_URL } from "../config";
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -11,7 +12,7 @@ const COLORS = {
   pink: "#B4126E",
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_URL;
 const PHONE_REGEX = /^\+998\d{9}$/;
 
 async function parseErrorMessage(res) {
