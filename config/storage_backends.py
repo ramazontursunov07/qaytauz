@@ -1,0 +1,71 @@
+from django.conf import settings
+from django.core.files.storage import Storage
+from django.utils.deconstruct import deconstructible
+from imagekitio import ImageKit
+
+
+@deconstructible
+class ImageKitStorage(Storage):
+    """
+    Django uchun ImageKit'ga asoslangan fayl saqlash tizimi.
+
+    Render kabi bepul serverlarda oddiy fayl tizimi (local disk) vaqtinchalik
+    bo'ladi — server qayta ishga tushganda yoki qayta deploy qilinganda undagi
+    barcha fayllar (shu jumladan yuklangan rasmlar) o'chib ketadi. Shuning uchun
+    rasmlarni ImageKit'ning doimiy bulutli xotirasiga yuklaymiz.
+    """
+
+    def __init__(self):
+        self.client = ImageKit(
+            private_key=settings.IMAGEKIT_PRIVATE_KEY,
+            public_key=settings.IMAGEKIT_PUBLIC_KEY,
+            url_endpoint=settings.IMAGEKIT_URL_ENDPOINT,
+        )
+
+    def _save(self, name, content):
+        content.seek(0)
+        file_bytes = content.read()
+
+        folder = "/"
+        file_name = name
+        if "/" in name:
+            folder_part, file_name = name.rsplit("/", 1)
+            folder = "/" + folder_part
+
+        self.client.upload_file(
+            file=file_bytes,
+            file_name=file_name,
+            options={
+                "folder": folder,
+                # False qilib qo'yamiz, shunda ImageKit nomni o'zgartirmaydi va
+                # Django modeldagi fayl manzili bilan haqiqiy URL bir xil bo'ladi.
+                "use_unique_file_name": False,
+            },
+        )
+        return name
+
+    def exists(self, name):
+        # use_unique_file_name=False bo'lgani uchun bir xil nom bilan qayta
+        # yuklansa, ImageKit eskisining ustidan yozadi — bu muammo emas.
+        # Shuning uchun har doim "mavjud emas" deb aytamiz, Django nomni
+        # o'zgartirmasdan to'g'ridan-to'g'ri saqlashda davom etadi.
+        return False
+
+    def url(self, name):
+        return f"{settings.IMAGEKIT_URL_ENDPOINT.rstrip('/')}/{name.lstrip('/')}"
+
+    def delete(self, name):
+        # ImageKit'dan faylni o'chirish uchun avval fileId'ni qidirib topish
+        # kerak bo'ladi (API orqali). Hozircha bu funksiya soddalashtirilgan —
+        # mahsulot/rasm o'chirilganda ImageKit'dagi fayl saqlanib qoladi,
+        # bu esa ilovaning ishlashiga ta'sir qilmaydi.
+        pass
+
+    def size(self, name):
+        return 0
+
+    def _open(self, name, mode='rb'):
+        raise NotImplementedError(
+            "ImageKitStorage fayllarni to'g'ridan-to'g'ri ochish uchun mo'ljallanmagan, "
+            "faqat yuklash (upload) va URL yaratish uchun ishlatiladi."
+        )
