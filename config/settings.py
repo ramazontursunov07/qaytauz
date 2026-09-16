@@ -21,13 +21,11 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com']
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://qaytauz-4.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://qaytauz-4.onrender.com",
 ]
 
 # Application definition
@@ -131,10 +129,20 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Django 5+ da fayl saqlash tizimi STORAGES orqali belgilanadi.
+# Eski DEFAULT_FILE_STORAGE / STATICFILES_STORAGE sozlamalari endi ishlamaydi.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Rasmlar Render'ning vaqtinchalik diskiga emas, ImageKit'ga saqlanadi —
 # shunda server qayta ishga tushganda ham rasmlar yo'qolmaydi.
@@ -143,7 +151,7 @@ IMAGEKIT_PUBLIC_KEY = os.environ.get('IMAGEKIT_PUBLIC_KEY')
 IMAGEKIT_URL_ENDPOINT = os.environ.get('IMAGEKIT_URL_ENDPOINT')
 
 if IMAGEKIT_PRIVATE_KEY and IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT:
-    DEFAULT_FILE_STORAGE = 'config.storage_backends.ImageKitStorage'
+    STORAGES["default"]["BACKEND"] = "config.storage_backends.ImageKitStorage"
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
