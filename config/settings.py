@@ -21,13 +21,13 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com']
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://qaytauz-4.onrender.com/",
+    "https://qaytauz-4.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://qaytauz-4.onrender.com/",
+    "https://qaytauz-4.onrender.com",
 ]
 
 # Application definition
