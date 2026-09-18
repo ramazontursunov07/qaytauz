@@ -81,6 +81,7 @@ export default function AddListingDescription() {
             resize: "none",
             minHeight: 160,
             fontFamily: "inherit",
+            color: "#08060d"
           }}
         />
 
