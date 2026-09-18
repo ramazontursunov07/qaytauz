@@ -146,6 +146,7 @@ export default function AddListingLocation() {
             fontSize: 15,
             outline: "none",
             marginBottom: 28,
+            color: "#08060d",
           }}
         />
 
