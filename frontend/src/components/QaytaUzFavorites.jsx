@@ -16,10 +16,7 @@ const COLORS = {
 
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
-  .qz-shell{ max-width: 480px; margin: 0 auto; }
-  @media (min-width: 860px){
-    .qz-shell{ max-width: 1160px; }
-  }
+  .qz-shell{ max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 `;
 
 function resolveImageUrl(url) {
@@ -101,7 +98,7 @@ export default function QaytaUzFavorites() {
       <style>{GLOBAL_STYLES}</style>
 
       <div style={{ padding: "20px 16px 0", textAlign: "center", position: "relative" }}>
-        <h1 style={{ fontFamily: "Fraunces, serif", fontWeight: 700, fontSize: 20, margin: 0 }}>
+        <h1 style={{ fontFamily: "Fraunces, serif", fontWeight: 700, fontSize: 20, margin: 0, color: COLORS.ink }}>
           Sevimlilar
         </h1>
       </div>
