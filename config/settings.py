@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'corsheaders',
+    'storages',
 
     'apps.chats',
     'apps.favorites',
@@ -146,14 +147,19 @@ STORAGES = {
     },
 }
 
-# Rasmlar Render'ning vaqtinchalik diskiga emas, ImageKit'ga saqlanadi —
-# shunda server qayta ishga tushganda ham rasmlar yo'qolmaydi.
-IMAGEKIT_PRIVATE_KEY = os.environ.get('IMAGEKIT_PRIVATE_KEY')
-IMAGEKIT_PUBLIC_KEY = os.environ.get('IMAGEKIT_PUBLIC_KEY')
-IMAGEKIT_URL_ENDPOINT = os.environ.get('IMAGEKIT_URL_ENDPOINT')
+# --- AWS S3: rasmlar shu yerga saqlanadi, Render diskiga emas ---
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'eu-north-1')
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com' if AWS_STORAGE_BUCKET_NAME else None
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
 
-if IMAGEKIT_PRIVATE_KEY and IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT:
-    STORAGES["default"]["BACKEND"] = "config.storage_backends.ImageKitStorage"
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
+    STORAGES["default"]["BACKEND"] = "storages.backends.s3.S3Storage"
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
