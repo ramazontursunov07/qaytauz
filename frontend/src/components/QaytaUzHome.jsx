@@ -269,6 +269,7 @@ export default function QaytaUzHome() {
                   flex: 1,
                   minWidth: 0,
                   background: "transparent",
+                  color: "#08060d",
                 }}
               />
               {searchQuery && (
