@@ -73,6 +73,7 @@ export default function AddListingTitle() {
             padding: "16px 16px",
             fontSize: 15,
             outline: "none",
+            color: "#08060d",
           }}
         />
         <div
