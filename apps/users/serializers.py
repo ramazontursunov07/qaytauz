@@ -120,12 +120,44 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'seller', 'product', 'rating', 'comment', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        # 'seller' clientdan QABUL QILINMAYDI: u har doim product.owner dan olinadi (views.py).
+        read_only_fields = ['id', 'seller', 'created_at']
+        extra_kwargs = {'product': {'required': True, 'allow_null': False}}
 
     def validate_rating(self, value):
         if value < 1 or value > 5:
             raise serializers.ValidationError("Baho 1 dan 5 gacha bo'lishi kerak.")
         return value
+
+    def validate(self, attrs):
+        from apps.chats.models import Chat
+        from apps.products.models import Product
+
+        reviewer = self.context['request'].user
+        product = attrs['product']
+        seller = product.owner
+
+        # 1) O'ziga sharh yozish mumkin emas
+        if seller.id == reviewer.id:
+            raise serializers.ValidationError("O'zingizning e'loningizga sharh qoldira olmaysiz.")
+
+        # 2) Faqat ommaviy (Faol / Sotildi) e'lon bo'yicha; bloklangan yoki
+        #    ko'rib chiqilayotgan e'longa baho berib bo'lmaydi
+        if product.status not in (Product.ACTIVE, Product.SOLD):
+            raise serializers.ValidationError("Bu e'lon bo'yicha sharh qoldirib bo'lmaydi.")
+
+        # 3) Bitim isboti: xaridor va sotuvchi shu e'lon bo'yicha chatlashgan bo'lishi kerak
+        had_deal_chat = Chat.objects.filter(product=product, participants=reviewer) \
+            .filter(participants=seller).exists()
+        if not had_deal_chat:
+            raise serializers.ValidationError(
+                "Sharh qoldirish uchun avval sotuvchi bilan shu e'lon bo'yicha muloqot qilgan bo'lishingiz kerak.")
+
+        # 4) Bir e'lon bo'yicha faqat bitta sharh (aks holda bazada IntegrityError -> 500)
+        if Review.objects.filter(reviewer=reviewer, product=product).exists():
+            raise serializers.ValidationError("Siz bu e'lon bo'yicha allaqachon sharh qoldirgansiz.")
+
+        return attrs
 
 
 class SellerReviewSerializer(serializers.ModelSerializer):
