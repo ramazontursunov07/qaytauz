@@ -1,4 +1,7 @@
-from rest_framework import generics, permissions
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, permissions, status as http_status
+from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -46,19 +49,28 @@ class ProductListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = Product.objects.all().order_by('-created_at')
-        # Sotuvchi profilida "Arxiv" bo'limini ko'rsatish uchun status aniq
-        # so'ralganda (masalan status=Arxiv), barcha holatlar orasidan filtrlaymiz.
-        # Aks holda (odatiy ko'rish/qidiruv) faqat "Faol" e'lonlar ko'rinadi.
-        if not self.request.query_params.get('status'):
-            qs = qs.filter(status=Product.ACTIVE)
-        return qs
+        # Ommaviy ro'yxatda Bloklangan / Ko'rib chiqilmoqda e'lonlar HECH QACHON chiqmaydi.
+        # Sotuvchi profilidagi "Arxiv" bo'limi uchun faqat Sotildi ruxsat etiladi
+        # (status=Arxiv / status=Sotildi so'ralganda). Aks holda faqat "Faol".
+        if self.request.query_params.get('status'):
+            return qs.filter(status__in=[Product.ACTIVE, Product.SOLD])
+        return qs.filter(status=Product.ACTIVE)
 
 
 class ProductDetailView(generics.RetrieveAPIView):
     """Bitta e'lonni to'liq ko'rish"""
-    queryset = Product.objects.all()
     serializer_class = ProductDetailSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        user = self.request.user
+        public = Q(status__in=[Product.ACTIVE, Product.SOLD])
+        if user.is_authenticated:
+            if user.is_staff:
+                return Product.objects.all()
+            # Egasi o'zining har qanday holatdagi e'lonini ko'ra oladi
+            return Product.objects.filter(public | Q(owner=user))
+        return Product.objects.filter(public)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -129,6 +141,24 @@ class ProductUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         # shunda frontend yangilangan rasmlar/atributlar ro'yxatini ham darhol oladi.
         output_serializer = ProductDetailSerializer(product, context=self.get_serializer_context())
         return Response(output_serializer.data)
+
+
+class ProductMarkSoldView(APIView):
+    """Egasi e'lonni faqat 'Sotildi' qila oladi (faqat Faol e'londan).
+
+    Bloklangan / Ko'rib chiqilmoqda e'lonlarning holatini egasi o'zgartira olmaydi —
+    ularni faqat admin (AdminProductUpdateDeleteView) boshqaradi.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk, owner=request.user)
+        if product.status != Product.ACTIVE:
+            return Response({'detail': "Faqat faol e'lonni sotilgan deb belgilash mumkin."},
+                            status=http_status.HTTP_400_BAD_REQUEST)
+        product.status = Product.SOLD
+        product.save(update_fields=['status', 'updated_at'])
+        return Response(ProductDetailSerializer(product, context={'request': request}).data)
 
 
 class AttributeTypeListView(generics.ListAPIView):
