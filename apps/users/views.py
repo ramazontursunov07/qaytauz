@@ -38,7 +38,9 @@ class ReviewCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(reviewer=self.request.user)
+        # Sotuvchi clientdan emas, e'lon egasidan olinadi
+        product = serializer.validated_data['product']
+        serializer.save(reviewer=self.request.user, seller=product.owner)
 
 
 class SellerReviewListView(generics.ListAPIView):
