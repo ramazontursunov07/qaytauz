@@ -1,11 +1,15 @@
-from rest_framework import generics, permissions, views
-from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework import views
 from .serializers import RegisterSerializer, UserProfileSerializer, NotificationSerializer, PublicUserSerializer, \
     ReportCreateSerializer, BlockUserSerializer, ReviewCreateSerializer, SellerReviewSerializer
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from .models import Notification, BlockedUser, Subscription
+from rest_framework import generics, permissions
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Report, Review
+from .serializers import AdminUserSerializer, AdminReportSerializer, AdminReviewSerializer
+from apps.products.models import Product
 
 User = get_user_model()
 
@@ -50,14 +54,6 @@ class SellerReviewListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Review.objects.filter(seller_id=self.kwargs['seller_id'])
-
-
-from rest_framework import generics, permissions
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Report, Review
-from .serializers import AdminUserSerializer, AdminReportSerializer, AdminReviewSerializer
-from apps.products.models import Product
 
 
 class BlockUserView(generics.CreateAPIView):
