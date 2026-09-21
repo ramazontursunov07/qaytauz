@@ -143,6 +143,7 @@ export default function WriteReview() {
             outline: "none",
             resize: "vertical",
             marginBottom: 16,
+            color: black
           }}
         />
 
