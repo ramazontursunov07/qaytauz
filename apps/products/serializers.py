@@ -111,8 +111,10 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['title', 'description', 'price', 'condition', 'category', 'region',
-                  'status', 'extra_info', 'free_delivery', 'attribute_values',
+                  'extra_info', 'free_delivery', 'attribute_values',
                   'remove_image_ids', 'main_image_id']
+        # DIQQAT: 'status' bu yerda YO'Q. Holatni egasi PATCH orqali o'zgartira olmaydi;
+        # 'Sotildi' uchun alohida MarkSoldView, bloklash/tasdiqlash esa faqat admin endpointida.
 
     def update(self, instance, validated_data):
         attributes_data = validated_data.pop('attribute_values', None)
