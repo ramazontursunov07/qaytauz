@@ -6,7 +6,8 @@ from .views import (CategoryListView,
                     ProductDetailView,
                     ProductCreateView,
                     MyProductListView,
-                    ProductUpdateDeleteView, AttributeTypeListView, AdminProductListView, AdminProductUpdateDeleteView
+                    ProductUpdateDeleteView, AttributeTypeListView, AdminProductListView, AdminProductUpdateDeleteView,
+                    ProductMarkSoldView
                     )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('my/', MyProductListView.as_view(), name='my-products'),
     path('<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
     path('<int:pk>/manage/', ProductUpdateDeleteView.as_view(), name='product-manage'),
+    path('<int:pk>/mark-sold/', ProductMarkSoldView.as_view(), name='product-mark-sold'),
     path('attribute-types/', AttributeTypeListView.as_view(), name='attribute-type-list'),
     path('admin/all/', AdminProductListView.as_view(), name='admin-product-list'),
     path('admin/<int:pk>/', AdminProductUpdateDeleteView.as_view(), name='admin-product-manage')
