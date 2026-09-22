@@ -246,3 +246,4 @@ class ProductModerationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.blocked.refresh_from_db()
         self.assertEqual(self.blocked.status, Product.ACTIVE)
+        
