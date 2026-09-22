@@ -130,13 +130,9 @@ export default function ListingDetail() {
   const handleMarkAsSold = () => {
     const token = localStorage.getItem("access_token");
     setActionError("");
-    fetch(`${API_BASE}/api/products/${id}/manage/`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ status: "Sotildi" }),
+    fetch(`${API_BASE}/api/products/${id}/mark-sold/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error("Holatni o'zgartirib bo'lmadi");

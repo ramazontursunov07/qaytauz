@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Notification, Report, Review, BlockedUser, Subscription
+from apps.chats.models import Chat
+from apps.products.models import Product
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 User = get_user_model()
 
@@ -11,6 +15,22 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'phone_number', 'region']
+
+    def validate(self, attrs):
+        # AUTH_PASSWORD_VALIDATORS (settings.py) DRF orqali avtomatik ishlamaydi,
+        # shuning uchun bu yerda qo'lda chaqiramiz. user=... berilishi shart,
+        # aks holda UserAttributeSimilarityValidator ishlamaydi.
+
+        temp_user = User(
+            username=attrs.get('username'),
+            email=attrs.get('email'),
+            phone_number=attrs.get('phone_number')
+        )
+        try:
+            validate_password(attrs.get('password'),user=temp_user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({'password':list(e.messages)})
+        return attrs
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
@@ -120,12 +140,41 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'seller', 'product', 'rating', 'comment', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        # 'seller' clientdan QABUL QILINMAYDI: u har doim product.owner dan olinadi (views.py).
+        read_only_fields = ['id', 'seller', 'created_at']
+        extra_kwargs = {'product': {'required': True, 'allow_null': False}}
 
     def validate_rating(self, value):
         if value < 1 or value > 5:
             raise serializers.ValidationError("Baho 1 dan 5 gacha bo'lishi kerak.")
         return value
+
+    def validate(self, attrs):
+
+        reviewer = self.context['request'].user
+        product = attrs['product']
+        seller = product.owner
+
+        # 1) O'ziga sharh yozish mumkin emas
+        if seller.id == reviewer.id:
+            raise serializers.ValidationError("O'zingizning e'loningizga sharh qoldira olmaysiz.")
+
+        # 2) Faqat ommaviy (Faol / Sotildi) e'lon bo'yicha; bloklangan yoki
+        #    ko'rib chiqilayotgan e'longa baho berib bo'lmaydi
+        if product.status not in (Product.ACTIVE, Product.SOLD):
+            raise serializers.ValidationError("Bu e'lon bo'yicha sharh qoldirib bo'lmaydi.")
+
+        # 3) Bitim isboti: xaridor va sotuvchi shu e'lon bo'yicha chatlashgan bo'lishi kerak
+        had_deal_chat = Chat.objects.filter(product=product, participants=reviewer).filter(participants=seller).exists()
+        if not had_deal_chat:
+            raise serializers.ValidationError(
+                "Sharh qoldirish uchun avval sotuvchi bilan shu e'lon bo'yicha muloqot qilgan bo'lishingiz kerak.")
+
+        # 4) Bir e'lon bo'yicha faqat bitta sharh (aks holda bazada IntegrityError -> 500)
+        if Review.objects.filter(reviewer=reviewer, product=product).exists():
+            raise serializers.ValidationError("Siz bu e'lon bo'yicha allaqachon sharh qoldirgansiz.")
+
+        return attrs
 
 
 class SellerReviewSerializer(serializers.ModelSerializer):

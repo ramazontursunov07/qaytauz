@@ -57,21 +57,25 @@ class Report(models.Model):  # Hisobot(Shikoyat)
 
 
 class Notification(models.Model):
-    MESSAGE = 'Yangi xabar'
-    FAVORITE = 'E\'lon yoqtirildi'
-    REVIEW = 'Yangi sharh'
-    MODERATION = 'Moderatsiya natijasi'
-    PROMO = 'Aksiya/chegirma'
+    class NotificationType(models.TextChoices):
+        # Barqaror (machine-readable) qiymatlar. Kod shu constantlar orqali
+        # yoziladi, shuning uchun ular hech qachon o'zgarmasligi kerak;
+        # faqat .label (ikkinchi element) tarjima/matn sifatida o'zgartirilishi mumkin.
+        MESSAGE = 'message', "Yangi xabar"
+        FAVORITE = 'favorite', "E'lon yoqtirildi"
+        REVIEW = 'review', "Yangi sharh"
+        MODERATION = 'moderation', "Moderatsiya natijasi"
+        PROMO = 'promo', "Aksiya/chegirma"
 
-    NOTIFICATION_TYPES = [
-        (MESSAGE, 'Yangi xabar'),
-        (FAVORITE, 'E\'lon yoqtirildi'),
-        (REVIEW, 'Yangi sharh'),
-        (MODERATION, 'Moderatsiya natijasi'),
-        (PROMO, 'Aksiya/chegirma')
-    ]
+    # Eskicha kod bilan moslik uchun (agar boshqa joyda ishlatilgan bo'lsa)
+    MESSAGE = NotificationType.MESSAGE
+    FAVORITE = NotificationType.FAVORITE
+    REVIEW = NotificationType.REVIEW
+    MODERATION = NotificationType.MODERATION
+    PROMO = NotificationType.PROMO
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    notification_type = models.CharField(max_length=20, choices=NotificationType.choices)
     text = models.CharField(max_length=255)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -109,4 +113,3 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.subscriber} subscribed to {self.target}"
-    
