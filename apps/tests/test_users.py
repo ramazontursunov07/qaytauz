@@ -224,3 +224,51 @@ class ReviewCreateTest(APITestCase):
             response = self.client.post(self.url, self._payload(rating=bad), format='json')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, bad)
         self.assertEqual(Review.objects.count(), 0)
+
+
+class RegisterPasswordValidationTest(APITestCase):
+    """AUTH_PASSWORD_VALIDATORS registratsiyada ishlashini tekshiradi (MEDIUM #4)."""
+
+    def _payload(self, **kw):
+        data = {
+            'username': 'newuser1',
+            'email': 'newuser1@example.com',
+            'password': 'StrongPass9!',
+            'phone_number': '+998901234599',
+            'region': 'Toshkent',
+        }
+        data.update(kw)
+        return data
+
+    def test_common_password_rejected(self):
+        """CommonPasswordValidator: juda ko'p ishlatiladigan parol rad etilishi kerak."""
+        url = reverse('register')
+        response = self.client.post(url, self._payload(password='password'))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.filter(username='newuser1').count(), 0)
+
+    def test_numeric_only_password_rejected(self):
+        """NumericPasswordValidator: faqat raqamlardan iborat parol rad etilishi kerak."""
+        url = reverse('register')
+        response = self.client.post(url, self._payload(password='12345678'))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_too_short_password_rejected(self):
+        """MinimumLengthValidator: juda qisqa parol rad etilishi kerak."""
+        url = reverse('register')
+        response = self.client.post(url, self._payload(password='abc123'))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_similar_to_username_rejected(self):
+        """UserAttributeSimilarityValidator: parol username'ga juda o'xshasa rad etilishi kerak."""
+        url = reverse('register')
+        response = self.client.post(url, self._payload(
+            username='johnsmith2024', password='johnsmith2024'))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_strong_password_accepted(self):
+        """Kuchli, boshqa validatorlarga mos parol muvaffaqiyatli ro'yxatdan o'tishi kerak."""
+        url = reverse('register')
+        response = self.client.post(url, self._payload())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username='newuser1').exists())
