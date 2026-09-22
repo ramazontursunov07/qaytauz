@@ -27,7 +27,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         if product_owner != favorite.user:
             Notification.objects.create(
                 user=product_owner,
-                notification_type='favorite',
+                notification_type=Notification.NotificationType.FAVORITE,
                 text=f"{favorite.user.username} '{favorite.product.title}' e'loningizni sevimlilarga qo'shdi.",
             )
         return favorite
