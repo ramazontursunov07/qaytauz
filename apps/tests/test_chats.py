@@ -143,6 +143,7 @@ class ChatCreateSecurityTest(APITestCase):
         self.url = reverse('chat-create')
 
     def test_creator_is_added_as_participant(self):
+        """Xaridor chat yaratadi va yaratilgan chatni bazadan qayta oladi."""
         self.client.force_authenticate(self.buyer)
         response = self.client.post(self.url, {'product': self.product.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -165,11 +166,13 @@ class ChatCreateSecurityTest(APITestCase):
         self.assertNotIn(self.stranger2.id, participant_ids)
 
     def test_seller_cannot_open_chat_on_own_product(self):
+        """E'lon egasi o'zining e'loniga chat ocha olmaydi."""
         self.client.force_authenticate(self.seller)
         response = self.client.post(self.url, {'product': self.product.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_duplicate_chat_returns_existing(self):
+        """Chat yaratuvchi bitta e'longa ikkita chat ocha olmaydi dublikatni oldi olindi."""
         self.client.force_authenticate(self.buyer)
         first = self.client.post(self.url, {'product': self.product.id}, format='json')
         second = self.client.post(self.url, {'product': self.product.id}, format='json')
@@ -177,6 +180,6 @@ class ChatCreateSecurityTest(APITestCase):
         self.assertEqual(Chat.objects.filter(product=self.product).count(), 1)
 
     def test_chat_create_requires_login(self):
+        """Login qilmasdan ham chat ocha olmaydi."""
         response = self.client.post(self.url, {'product': self.product.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        
