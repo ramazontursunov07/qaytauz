@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Notification, Report, Review, BlockedUser, Subscription
+from apps.chats.models import Chat
+from apps.products.models import Product
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 User = get_user_model()
 
@@ -11,6 +15,22 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'phone_number', 'region']
+
+    def validate(self, attrs):
+        # AUTH_PASSWORD_VALIDATORS (settings.py) DRF orqali avtomatik ishlamaydi,
+        # shuning uchun bu yerda qo'lda chaqiramiz. user=... berilishi shart,
+        # aks holda UserAttributeSimilarityValidator ishlamaydi.
+
+        temp_user = User(
+            username=attrs.get('username'),
+            email=attrs.get('email'),
+            phone_number=attrs.get('phone_number')
+        )
+        try:
+            validate_password(attrs.get('password'),user=temp_user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({'password':list(e.messages)})
+        return attrs
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
@@ -130,8 +150,6 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        from apps.chats.models import Chat
-        from apps.products.models import Product
 
         reviewer = self.context['request'].user
         product = attrs['product']
@@ -147,8 +165,7 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Bu e'lon bo'yicha sharh qoldirib bo'lmaydi.")
 
         # 3) Bitim isboti: xaridor va sotuvchi shu e'lon bo'yicha chatlashgan bo'lishi kerak
-        had_deal_chat = Chat.objects.filter(product=product, participants=reviewer) \
-            .filter(participants=seller).exists()
+        had_deal_chat = Chat.objects.filter(product=product, participants=reviewer).filter(participants=seller).exists()
         if not had_deal_chat:
             raise serializers.ValidationError(
                 "Sharh qoldirish uchun avval sotuvchi bilan shu e'lon bo'yicha muloqot qilgan bo'lishingiz kerak.")
