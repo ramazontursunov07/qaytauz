@@ -69,9 +69,26 @@ class ChatDetailSerializer(serializers.ModelSerializer):
 class ChatCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = ['id', 'participants', 'product']
+        fields = ['id', 'product']
 
-    def create(self, validated_data):
-        chat = Chat.objects.create(product=validated_data.get('product'))
-        chat.participants.set(validated_data['participants'])
+
+    def validate_product(self,product):
+        request = self.context['request']
+        if product.owner_id == request.user.id:
+            raise serializers.ValidationError("O'zingizning e'loningizga chat ocha olmaysiz.")
+        return product
+
+    def create(self,validated_data):
+        request = self.context['request']
+        product = validated_data.get('product')
+        buyer = request.user
+        seller = product.owner
+
+        existing = Chat.objects.filter(product=product).filter(participants=buyer).filter(participants=seller).first()
+
+        if existing:
+            return existing
+
+        chat = Chat.objects.create(product=product)
+        chat.participants.set([buyer,seller])
         return chat
