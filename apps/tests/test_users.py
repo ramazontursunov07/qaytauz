@@ -5,6 +5,7 @@ from django.urls import reverse
 from apps.chats.models import Chat
 from apps.products.models import Category, Product
 from apps.users.models import Review
+from apps.users.models import Notification
 
 User = get_user_model()
 
@@ -272,3 +273,29 @@ class RegisterPasswordValidationTest(APITestCase):
         response = self.client.post(url, self._payload())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(User.objects.filter(username='newuser1').exists())
+
+
+class NotificationModelTest(APITestCase):
+    """Notification.notification_type doim model choices'dagi (machine-value)
+    qiymatlardan biriga teng bo'lishini tekshiradi - eski xatoda kod
+    ('favorite', 'message') va model choices ('E'lon yoqtirildi', 'Yangi xabar')
+    bir-biriga mos kelmas edi."""
+
+    def test_choice_values_are_stable_machine_values(self):
+        valid_values = dict(Notification.NotificationType.choices).keys()
+        # Choices qiymatlari inson o'qiydigan matn emas, dasturiy kod bo'lishi kerak
+        self.assertIn('message', valid_values)
+        self.assertIn('favorite', valid_values)
+        self.assertIn('review', valid_values)
+        self.assertIn('moderation', valid_values)
+        self.assertIn('promo', valid_values)
+
+    def test_choice_values_fit_max_length(self):
+        # notification_type = CharField(max_length=20) - har bir qiymat shu chegaraga sig'ishi kerak
+        for value, _label in Notification.NotificationType.choices:
+            self.assertLessEqual(len(value), 20)
+
+    def test_notification_type_constants_match_choices(self):
+        # Notification.MESSAGE kabi eski usulda ishlatilsa ham, choices bilan mos kelishi kerak
+        self.assertEqual(Notification.MESSAGE, Notification.NotificationType.MESSAGE)
+        self.assertEqual(Notification.FAVORITE, Notification.NotificationType.FAVORITE)
