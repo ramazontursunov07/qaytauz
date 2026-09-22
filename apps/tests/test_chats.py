@@ -118,3 +118,65 @@ class ChatAPITest(APITestCase):
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ChatCreateSecurityTest(APITestCase):
+    """Chat yaratuvchisi ishtirokchilar orasida bo'lishi shart (HIGH) uchun regression testlar."""
+
+    def setUp(self):
+        self.buyer = User.objects.create_user(
+            username='buyer4', password='testpass123', email='buyer4@example.com',
+            phone_number='+998904444444', region='Toshkent')
+        self.seller = User.objects.create_user(
+            username='seller4', password='testpass123', email='seller4@example.com',
+            phone_number='+998905555555', region='Samarqand')
+        self.stranger1 = User.objects.create_user(
+            username='stranger4a', password='testpass123', email='stranger4a@example.com',
+            phone_number='+998906666666', region='Buxoro')
+        self.stranger2 = User.objects.create_user(
+            username='stranger4b', password='testpass123', email='stranger4b@example.com',
+            phone_number='+998907777777', region='Andijon')
+        self.category = Category.objects.create(name='Sport', slug='sport')
+        self.product = Product.objects.create(
+            title='Velosiped', description='x', price=1000, category=self.category,
+            owner=self.seller, status=Product.ACTIVE)
+        self.url = reverse('chat-create')
+
+    def test_creator_is_added_as_participant(self):
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': self.product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        chat = Chat.objects.get(id=response.data['id'])
+        self.assertIn(self.buyer, chat.participants.all())
+        self.assertIn(self.seller, chat.participants.all())
+
+    def test_client_cannot_choose_arbitrary_participants(self):
+        """Client boshqa ikkita begona foydalanuvchini yuborsa ham, e'tiborga olinmaydi."""
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {
+            'product': self.product.id,
+            'participants': [self.stranger1.id, self.stranger2.id],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        chat = Chat.objects.get(id=response.data['id'])
+        participant_ids = set(chat.participants.values_list('id', flat=True))
+        self.assertEqual(participant_ids, {self.buyer.id, self.seller.id})
+        self.assertNotIn(self.stranger1.id, participant_ids)
+        self.assertNotIn(self.stranger2.id, participant_ids)
+
+    def test_seller_cannot_open_chat_on_own_product(self):
+        self.client.force_authenticate(self.seller)
+        response = self.client.post(self.url, {'product': self.product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_chat_returns_existing(self):
+        self.client.force_authenticate(self.buyer)
+        first = self.client.post(self.url, {'product': self.product.id}, format='json')
+        second = self.client.post(self.url, {'product': self.product.id}, format='json')
+        self.assertEqual(first.data['id'], second.data['id'])
+        self.assertEqual(Chat.objects.filter(product=self.product).count(), 1)
+
+    def test_chat_create_requires_login(self):
+        response = self.client.post(self.url, {'product': self.product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
