@@ -175,6 +175,8 @@ class ChatCreateSecurityTest(APITestCase):
         """Chat yaratuvchi bitta e'longa ikkita chat ocha olmaydi dublikatni oldi olindi."""
         self.client.force_authenticate(self.buyer)
         first = self.client.post(self.url, {'product': self.product.id}, format='json')
+        print("STATUS:", first.status_code)
+        print("DATA:", first.data)
         second = self.client.post(self.url, {'product': self.product.id}, format='json')
         self.assertEqual(first.data['id'], second.data['id'])
         self.assertEqual(Chat.objects.filter(product=self.product).count(), 1)

@@ -13,6 +13,7 @@ from .serializers import (CategorySerializer,
                           ProductDetailSerializer,
                           ProductCreateSerializer, AttributeTypeSerializer,
                           ProductUpdateSerializer)
+from django.db.models import Prefetch
 
 
 class CategoryListView(generics.ListAPIView):
@@ -48,10 +49,18 @@ class ProductListView(generics.ListAPIView):
     ordering_fields = ['price', 'created_at']
 
     def get_queryset(self):
-        qs = Product.objects.all().order_by('-created_at')
-        # Ommaviy ro'yxatda Bloklangan / Ko'rib chiqilmoqda e'lonlar HECH QACHON chiqmaydi.
-        # Sotuvchi profilidagi "Arxiv" bo'limi uchun faqat Sotildi ruxsat etiladi
-        # (status=Arxiv / status=Sotildi so'ralganda). Aks holda faqat "Faol".
+        qs = (
+            Product.objects
+            .select_related('category', 'owner')
+            .prefetch_related(
+                Prefetch(
+                    'images',
+                    queryset=ProductImage.objects.order_by('-is_main', 'id'),
+                    to_attr='prefetched_images',
+                )
+            )
+            .order_by('-created_at')
+        )
         if self.request.query_params.get('status'):
             return qs.filter(status__in=[Product.ACTIVE, Product.SOLD])
         return qs.filter(status=Product.ACTIVE)

@@ -2,7 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from apps.products.models import Category, Product
+from apps.products.models import Category, Product, ProductImage
 
 User = get_user_model()
 
@@ -246,4 +246,16 @@ class ProductModerationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.blocked.refresh_from_db()
         self.assertEqual(self.blocked.status, Product.ACTIVE)
-        
+
+    def test_product_list_has_no_n_plus_one(self):
+        for i in range(10):
+            p = Product.objects.create(
+                title=f'Mahsulot {i}', price=1000, owner=self.user1,
+                category=self.category, status=Product.ACTIVE,
+            )
+            ProductImage.objects.create(product=p, image='test.jpg', is_main=True)
+
+        url = reverse('product-list')
+        with self.assertNumQueries(5):  # aniq son loyihangizga qarab 4-6 oralig'ida bo'lishi mumkin
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

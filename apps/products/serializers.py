@@ -24,11 +24,13 @@ class ProductListSerializer(serializers.ModelSerializer):
                   'free_delivery', 'status', 'extra_info']
 
     def get_main_image(self, obj):
-        main = obj.images.filter(is_main=True).first()
-        if main:
-            return main.image.url
-        first = obj.images.first()
-        return first.image.url if first else None
+        images = getattr(obj, 'prefetched_images', None)
+        if images is None:  # fallback, agar prefetch qilinmagan bo'lsa (masalan boshqa joydan chaqirilsa)
+            images = list(obj.images.all())
+        if not images:
+            return None
+        main = next((img for img in images if img.is_main), images[0])
+        return main.image.url
 
 
 class AttributeTypeSerializer(serializers.ModelSerializer):
