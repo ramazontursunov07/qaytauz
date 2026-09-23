@@ -18,6 +18,18 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com']
 
+# --- Production xavfsizlik sozlamalari ---
+# Render/nginx kabi proksi orqasida ishlaganda Django so'rov HTTP orqali kelganini
+# ko'radi (SSL proksida tugaydi), shuning uchun bu header orqali "aslida HTTPS edi"ni bilib oladi.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SECURE_SSL_REDIRECT = not DEBUG          # HTTP so'rovni avtomatik HTTPS'ga yo'naltiradi
+SESSION_COOKIE_SECURE = not DEBUG        # session cookie faqat HTTPS orqali yuboriladi
+CSRF_COOKIE_SECURE = not DEBUG           # CSRF cookie faqat HTTPS orqali yuboriladi
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0   # brauzerga "doim HTTPS ishlat" deb 1 yilga buyuradi
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -42,6 +54,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'drf_yasg',
     'corsheaders',
@@ -175,6 +188,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
