@@ -2,7 +2,9 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from apps.products.models import Category, Product, ProductImage
+from unicodedata import category
+
+from apps.products.models import Category, Product, ProductImage, AttributeType, ProductAttributeValue
 
 User = get_user_model()
 
@@ -259,3 +261,16 @@ class ProductModerationTest(APITestCase):
         with self.assertNumQueries(3):
             response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_invalid_attribute_type_does_not_wipe_existing_data(self):
+        """Noto'g'ri attribute type yuborilsa,mavjud attributlar saqlanib qolishi kerak."""
+        self.client.force_authenticate(self.owner)
+        valid_type = AttributeType.objects.create(name='Rang', category=self.category)
+        ProductAttributeValue.objects.create(product=self.product, attribute_type=valid_type, value='Qizil')
+        url = reverse('product-update', args=[self.product.id])
+        response = self.client.patch(url, {
+            'attribute_values': [{'attribute_type': 99999, 'value': 'Yashil'}]
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ProductAttributeValue.objects.filter(product=self.product).count(), 1)
+        self.assertEqual(ProductAttributeValue.objects.get(product=self.product).value, 'Qizil')

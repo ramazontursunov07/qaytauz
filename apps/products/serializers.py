@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Product, ProductImage, Category, AttributeType, ProductAttributeValue
+from django.db import transaction
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -118,32 +119,49 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         # DIQQAT: 'status' bu yerda YO'Q. Holatni egasi PATCH orqali o'zgartira olmaydi;
         # 'Sotildi' uchun alohida MarkSoldView, bloklash/tasdiqlash esa faqat admin endpointida.
 
+    def validate(self, attrs):
+        attributes_data = attrs.get('attribute_values')
+        if attributes_data is not None:
+            category = attrs.get('category') or (self.instance.category if self.instance else None)
+            if category is None:
+                raise serializers.ValidationError(
+                    {'attribute_values': 'Attributlarni saqlash uchun avval kategoriya tanlash kerak.'})
+            valid_type_ids = set(
+                AttributeType.objects.filter(category=category).values_list('id', flat=True)
+            )
+            for item in attributes_data:
+                attr_type_id = item.get('attribute_type')
+                if attr_type_id not in valid_type_ids:
+                    raise serializers.ValidationError(
+                        {'attribute_values': f'attribute_type={attr_type_id} bu kategoriya uchun mavjud emas.'})
+        return attrs
+
     def update(self, instance, validated_data):
         attributes_data = validated_data.pop('attribute_values', None)
         remove_ids = validated_data.pop('remove_image_ids', None)
         main_image_id = validated_data.pop('main_image_id', None)
 
-        for field, value in validated_data.items():
-            setattr(instance, field, value)
-        instance.save()
+        with transaction.atomic():
+            for field, value in validated_data.items():
+                setattr(instance, field, value)
+            instance.save()
 
-        if attributes_data is not None:
-            instance.attribute_values.all().delete()
-            for attr in attributes_data:
-                attr_type_id = attr.get('attribute_type')
-                if not attr_type_id:
-                    continue
-                ProductAttributeValue.objects.create(
-                    product=instance,
-                    attribute_type_id=attr_type_id,
-                    value=attr.get('value', ''),
-                )
+            if attributes_data is not None:
+                instance.attribute_values.all().delete()
+                ProductAttributeValue.objects.bulk_create([
+                    ProductAttributeValue(
+                        product=instance,
+                        attribute_type_id=attr['attribute_type'],
+                        value=attr.get('value', '')
+                    )
+                    for attr in attributes_data if attr.get('attribute_type')
+                ])
 
-        if remove_ids:
-            instance.images.filter(id__in=remove_ids).delete()
+            if remove_ids:
+                instance.images.filter(id__in=remove_ids).delete()
 
-        if main_image_id:
-            instance.images.update(is_main=False)
-            instance.images.filter(id=main_image_id).update(is_main=True)
+            if main_image_id:
+                instance.images.update(is_main=False)
+                instance.images.filter(id=main_image_id).update(is_main=True)
 
         return instance
