@@ -21,21 +21,6 @@ sharh qoldirishi va sevimli e'lonlarni saqlab qo'yishi mumkin.
 **Fayl saqlash:** AWS S3 (production) / lokal media papka (development)
 **Deploy:** Render, Docker
 
-## Lokal o'rnatish
-
-### Backend
-
-\`\`\`bash
-git clone https://github.com/ramazontursunov07/qaytauz.git
-cd qaytauz
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-cp .env.example .env            # so'ng .env ichidagi qiymatlarni to'ldiring
-python manage.py migrate
-python manage.py runserver
-\`\`\`
-
 ### Frontend
 
 \`\`\`bash
