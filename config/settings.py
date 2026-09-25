@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
 
@@ -23,7 +24,9 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com']
 # ko'radi (SSL proksida tugaydi), shuning uchun bu header orqali "aslida HTTPS edi"ni bilib oladi.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-SECURE_SSL_REDIRECT = not DEBUG          # HTTP so'rovni avtomatik HTTPS'ga yo'naltiradi
+IS_TESTING = 'test' in sys.argv
+
+SECURE_SSL_REDIRECT = not DEBUG and not IS_TESTING
 SESSION_COOKIE_SECURE = not DEBUG        # session cookie faqat HTTPS orqali yuboriladi
 CSRF_COOKIE_SECURE = not DEBUG           # CSRF cookie faqat HTTPS orqali yuboriladi
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0   # brauzerga "doim HTTPS ishlat" deb 1 yilga buyuradi
