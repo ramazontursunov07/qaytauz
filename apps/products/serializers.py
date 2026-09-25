@@ -3,6 +3,21 @@ from .models import Product, ProductImage, Category, AttributeType, ProductAttri
 from django.db import transaction
 
 
+class FlexibleJSONField(serializers.JSONField):
+    """multipart/form-data orqali (JSON string) va oddiy JSON so'rov orqali
+    (list/dict) kelgan qiymatlarning ikkalasini ham qabul qiladi.
+
+    Oddiy JSONField(binary=True) faqat matn holida ishlaydi: agar qiymat
+    allaqachon Python list/dict bo'lsa (masalan `format='json'` bilan yoki
+    to'g'ridan-to'g'ri API orqali yuborilganda), `json.loads()` xato beradi
+    va butun so'rov 400 bilan qaytadi.
+    """
+
+    def to_internal_value(self, data):
+        self.binary = isinstance(data, (str, bytes))
+        return super().to_internal_value(data)
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -66,10 +81,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     # multipart/form-data orqali yuborilganda (rasmlar bilan birga) attribute_values
     # ham matn (JSON string) sifatida keladi, shuning uchun ProductUpdateSerializer
     # dagi kabi oddiy JSONField(binary=True) ishlatiladi (nested serializer emas).
-    attribute_values = serializers.JSONField(required=False, binary=True)
-    # multipart/form-data orqali yuborilganda extra_info matn (JSON string) sifatida keladi,
-    # shuning uchun binary=True bilan uni avtomatik dict'ga aylantiramiz.
-    extra_info = serializers.JSONField(required=False, binary=True)
+    attribute_values = FlexibleJSONField(required=False, write_only=True)    # multipart/form-data orqali yuborilganda extra_info matn (JSON string) sifatida keladi,
+    # JSON so'rovda esa tayyor dict sifatida keladi — FlexibleJSONField ikkalasini ham qo'llaydi.
+    extra_info = FlexibleJSONField(required=False)
     # Bazada hali kategoriya yaratilmagan yoki mos kelmagan bo'lishi mumkin, shuning uchun ixtiyoriy.
     category = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), required=False, allow_null=True
@@ -132,9 +146,9 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), required=False, allow_null=True
     )
-    extra_info = serializers.JSONField(required=False, binary=True)
-    attribute_values = serializers.JSONField(required=False, binary=True)
-    remove_image_ids = serializers.JSONField(required=False, binary=True)
+    extra_info = FlexibleJSONField(required=False)
+    attribute_values = FlexibleJSONField(required=False)
+    remove_image_ids = FlexibleJSONField(required=False)
     main_image_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
