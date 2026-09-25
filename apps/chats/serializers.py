@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Chat, Message
+from ..products.models import Product
 from ..users.models import Notification, BlockedUser
 
 
@@ -38,6 +39,7 @@ class MessageSerializer(serializers.ModelSerializer):
                 )
         return message
 
+
 class ChatSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     product_title = serializers.CharField(source='product.title', read_only=True)
@@ -69,12 +71,19 @@ class ChatDetailSerializer(serializers.ModelSerializer):
 class ChatCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = ['id', 'product']   # participants OLIB TASHLANDI — client bermaydi
+        fields = ['id', 'product']  # participants OLIB TASHLANDI — client bermaydi
 
     def validate_product(self, product):
         request = self.context['request']
+        user = request.user
+        owner = product.owner
         if product.owner_id == request.user.id:
             raise serializers.ValidationError("O'z e'loningizga chat ocha olmaysiz.")
+        if product.status not in [Product.ACTIVE, Product.SOLD]:
+            raise serializers.ValidationError("Bu e'lon bo'yicha chat ochib bo'lmaydi.")
+        if BlockedUser.objects.filter(blocker=user, blocked=owner).exists() or BlockedUser.objects.filter(blocker=owner,
+                                                                                                          blocked=user).exists():
+            raise serializers.ValidationError("Bu foydalanuvchiga chat ocha olmaysiz.")
         return product
 
     def create(self, validated_data):
