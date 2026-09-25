@@ -243,3 +243,35 @@ class ChatModerationSecurityTest(APITestCase):
         self.client.force_authenticate(self.buyer)
         response = self.client.post(self.url, {'product': product.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class ChatListPerformanceTest(APITestCase):
+    """Chat ro'yxatida N+1 so'rov (MEDIUM) uchun regression test."""
+
+    def setUp(self):
+        self.buyer = User.objects.create_user(
+            username='buyer6', password='testpass123', email='buyer6@example.com',
+            phone_number='+998901212121', region='Toshkent')
+        self.seller = User.objects.create_user(
+            username='seller6', password='testpass123', email='seller6@example.com',
+            phone_number='+998901313131', region='Samarqand')
+        self.category = Category.objects.create(name='Mebel', slug='mebel')
+        self.url = reverse('chat-list')
+
+    def _make_chat_with_messages(self, index):
+        product = Product.objects.create(
+            title=f'Mahsulot {index}', description='x', price=1000,
+            category=self.category, owner=self.seller, status=Product.ACTIVE)
+        chat = Chat.objects.create(product=product)
+        chat.participants.set([self.buyer, self.seller])
+        Message.objects.create(chat=chat, sender=self.buyer, text=f'Salom {index}')
+        Message.objects.create(chat=chat, sender=self.seller, text=f'Javob {index}')
+        return chat
+
+    def test_chat_list_has_no_n_plus_one(self):
+        for i in range(8):
+            self._make_chat_with_messages(i)
+
+        self.client.force_authenticate(self.buyer)
+        with self.assertNumQueries(5):
+            response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -49,13 +49,10 @@ class ChatSerializer(serializers.ModelSerializer):
         fields = ['id', 'participants', 'product', 'product_title', 'last_message', 'created_at']
 
     def get_last_message(self, obj):
-        last = obj.messages.last()
-        if last:
-            return {
-                'text': last.text,
-                'sender': last.sender.username,
-                'created_at': last.created_at
-            }
+        messages = list(obj.messages.all())
+        if messages:
+            last = messages[0]
+            return {'last':last.text,'sender':last.sender.username,'created_at':last.created_at}
         return None
 
 

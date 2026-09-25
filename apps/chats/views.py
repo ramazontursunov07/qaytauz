@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from rest_framework import views, generics, permissions
 from .models import Chat, Message
 from .serializers import ChatSerializer, ChatCreateSerializer, ChatDetailSerializer, MessageSerializer
@@ -8,7 +9,9 @@ class ChatListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Chat.objects.filter(participants=self.request.user)
+        return Chat.objects.filter(participants=self.request.user).select_related('product').\
+            prefetch_related(Prefetch('messages',queryset=Message.objects.select_related('sender').\
+            order_by('-created_at')))
 
 
 class ChatCreateView(generics.CreateAPIView):
