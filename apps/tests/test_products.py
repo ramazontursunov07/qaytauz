@@ -263,14 +263,14 @@ class ProductModerationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_invalid_attribute_type_does_not_wipe_existing_data(self):
-        """Noto'g'ri attribute type yuborilsa,mavjud attributlar saqlanib qolishi kerak."""
+        """Noto'g'ri attribute type yuborilsa, mavjud attributlar saqlanib qolishi kerak."""
         self.client.force_authenticate(self.owner)
         valid_type = AttributeType.objects.create(name='Rang', category=self.category)
-        ProductAttributeValue.objects.create(product=self.product, attribute_type=valid_type, value='Qizil')
-        url = reverse('product-update', args=[self.product.id])
+        ProductAttributeValue.objects.create(product=self.active, attribute_type=valid_type, value='Qizil')
+        url = reverse('product-manage', args=[self.active.id])
         response = self.client.patch(url, {
             'attribute_values': [{'attribute_type': 99999, 'value': 'Yashil'}]
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(ProductAttributeValue.objects.filter(product=self.product).count(), 1)
-        self.assertEqual(ProductAttributeValue.objects.get(product=self.product).value, 'Qizil')
+        self.assertEqual(ProductAttributeValue.objects.filter(product=self.active).count(), 1)
+        self.assertEqual(ProductAttributeValue.objects.get(product=self.active).value, 'Qizil')

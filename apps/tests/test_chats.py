@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from apps.products.models import Category, Product
+from apps.users.models import BlockedUser
 
 User = get_user_model()
 
@@ -185,3 +186,60 @@ class ChatCreateSecurityTest(APITestCase):
         """Login qilmasdan ham chat ocha olmaydi."""
         response = self.client.post(self.url, {'product': self.product.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ChatModerationSecurityTest(APITestCase):
+    """Yashirin (PENDING/BLOCKED) e'lonlarga va bloklangan foydalanuvchilarga
+    chat ochilmasligi (MEDIUM) uchun regression testlar."""
+
+    def setUp(self):
+        self.buyer = User.objects.create_user(
+            username='buyer5', password='testpass123', email='buyer5@example.com',
+            phone_number='+998908888888', region='Toshkent')
+        self.seller = User.objects.create_user(
+            username='seller5', password='testpass123', email='seller5@example.com',
+            phone_number='+998909999999', region='Samarqand')
+        self.category = Category.objects.create(name='Uy jihozlari', slug='uy-jihozlari')
+        self.url = reverse('chat-create')
+
+    def _make_product(self, status_value):
+        return Product.objects.create(
+            title='Divan', description='x', price=1000, category=self.category,
+            owner=self.seller, status=status_value)
+
+    def test_cannot_open_chat_on_pending_product(self):
+        """Kutilayotgan e'lonlarga chat ochib bo'lmaydi."""
+        product = self._make_product(Product.PENDING)
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cannot_open_chat_on_blocked_product(self):
+        """Bloklangan e'lonlarga chat ochib bo'lmaydi."""
+        product = self._make_product(Product.BLOCKED)
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_can_open_chat_on_sold_product(self):
+        """Sotilgan mahsulotlarga chat ochib bo'ladi."""
+        product = self._make_product(Product.SOLD)
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_blocker_cannot_open_chat_with_blocked_owner(self):
+        """Xaridor sotuvchini bloklagan bo'lsa, chat ocha olmaydi."""
+        product = self._make_product(Product.ACTIVE)
+        BlockedUser.objects.create(blocker=self.buyer, blocked=self.seller)
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_blocked_user_cannot_open_chat_with_blocker(self):
+        """Sotuvchi xaridorni bloklagan bo'lsa ham (teskari tomon), chat ocha olmaydi."""
+        product = self._make_product(Product.ACTIVE)
+        BlockedUser.objects.create(blocker=self.seller, blocked=self.buyer)
+        self.client.force_authenticate(self.buyer)
+        response = self.client.post(self.url, {'product': product.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
