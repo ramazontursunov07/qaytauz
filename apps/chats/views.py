@@ -10,7 +10,7 @@ class ChatListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Chat.objects.filter(participants=self.request.user).select_related('product').\
-            prefetch_related(Prefetch('messages',queryset=Message.objects.select_related('sender').\
+            prefetch_related('participants',Prefetch('messages',queryset=Message.objects.select_related('sender').\
             order_by('-created_at')))
 
 
