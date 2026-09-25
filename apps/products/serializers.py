@@ -63,7 +63,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
-    attribute_values = ProductAttributeValueSerializer(many=True, required=False)
+    # multipart/form-data orqali yuborilganda (rasmlar bilan birga) attribute_values
+    # ham matn (JSON string) sifatida keladi, shuning uchun ProductUpdateSerializer
+    # dagi kabi oddiy JSONField(binary=True) ishlatiladi (nested serializer emas).
+    attribute_values = serializers.JSONField(required=False, binary=True)
     # multipart/form-data orqali yuborilganda extra_info matn (JSON string) sifatida keladi,
     # shuning uchun binary=True bilan uni avtomatik dict'ga aylantiramiz.
     extra_info = serializers.JSONField(required=False, binary=True)
@@ -77,27 +80,36 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         fields = ['title', 'description', 'price', 'condition', 'category', 'region', 'extra_info',
                   'free_delivery', 'attribute_values']
 
-    def validate(self,attrs):
-        category = attrs.get('category')
+    def validate(self, attrs):
         attributes_data = attrs.get('attribute_values')
         if attributes_data is not None:
+            category = attrs.get('category')
             if category is None:
-                raise serializers.ValidationError("Kategoriyani tanlang.")
-            valid_type_ids = set(AttributeType.objects.filter(category=category).values_list('id',flat=True))
+                raise serializers.ValidationError(
+                    {'attribute_values': 'Attributlarni saqlash uchun avval kategoriya tanlash kerak.'})
+            valid_type_ids = set(
+                AttributeType.objects.filter(category=category).values_list('id', flat=True)
+            )
             for item in attributes_data:
-                attr_type = item.get('attribute_type')
-                if attr_type.id not in valid_type_ids:
-                    raise serializers.ValidationError("Bu attribut tanlangan kategoriyaga tegishli emas.")
+                attr_type_id = item.get('attribute_type')
+                if attr_type_id not in valid_type_ids:
+                    raise serializers.ValidationError(
+                        {'attribute_values': f'attribute_type={attr_type_id} bu kategoriya uchun mavjud emas.'})
         return attrs
 
-
     def create(self, validated_data):
-        attributes_data = validated_data.pop('attribute_values', [])
+        attributes_data = validated_data.pop('attribute_values', None) or []
         validated_data['owner'] = self.context['request'].user
         product = Product.objects.create(**validated_data)
 
-        for attr in attributes_data:
-            ProductAttributeValue.objects.create(product=product, **attr)
+        ProductAttributeValue.objects.bulk_create([
+            ProductAttributeValue(
+                product=product,
+                attribute_type_id=attr['attribute_type'],
+                value=attr.get('value', '')
+            )
+            for attr in attributes_data if attr.get('attribute_type')
+        ])
 
         return product
 

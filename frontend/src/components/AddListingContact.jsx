@@ -91,6 +91,10 @@ export default function AddListingContact() {
         })
       );
 
+      if (prevState.attributeValuesList && prevState.attributeValuesList.length > 0) {
+        formData.append("attribute_values", JSON.stringify(prevState.attributeValuesList));
+      }
+
       // Rasmlarni multipart/form-data orqali qo'shamiz
       (prevState.images || []).forEach((img) => {
         if (img.file) formData.append("images", img.file);

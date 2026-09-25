@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { API_URL } from "../config";
+
+const API_BASE = API_URL;
 
 const COLORS = {
   forest: "#2F6B4F",
@@ -48,12 +51,40 @@ export default function AddListingAttributes() {
   const location = useLocation();
   const prevState = location.state || {};
 
-  const [condition, setCondition] = useState("yangidek");
-  const [audience, setAudience] = useState("erkaklar");
+  const [condition, setCondition] = useState(prevState.condition || "yangidek");
+  const [audience, setAudience] = useState(prevState.audience || "erkaklar");
+
+  // Tanlangan kategoriyaga tegishli attribute type'lar (masalan "Rang", "Xotira hajmi")
+  const [attributeTypes, setAttributeTypes] = useState([]);
+  const [attributeValues, setAttributeValues] = useState(prevState.attributeValues || {});
+  const [loadingAttrs, setLoadingAttrs] = useState(false);
+
+  useEffect(() => {
+    if (!prevState.category) {
+      setAttributeTypes([]);
+      return;
+    }
+    setLoadingAttrs(true);
+    fetch(`${API_BASE}/api/products/attribute-types/?category=${prevState.category}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setAttributeTypes(Array.isArray(data) ? data : data.results || []))
+      .catch(() => setAttributeTypes([]))
+      .finally(() => setLoadingAttrs(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prevState.category]);
+
+  const setAttrValue = (typeId, value) => {
+    setAttributeValues((prev) => ({ ...prev, [typeId]: value }));
+  };
 
   const handleContinue = () => {
+    // Faqat foydalanuvchi qiymat kiritgan attributlarni yuboramiz
+    const attributeValuesList = attributeTypes
+      .filter((t) => (attributeValues[t.id] || "").trim().length > 0)
+      .map((t) => ({ attribute_type: t.id, value: attributeValues[t.id].trim() }));
+
     navigate("/sotish/tavsif", {
-      state: { ...prevState, condition, audience },
+      state: { ...prevState, condition, audience, attributeValues, attributeValuesList },
     });
   };
 
@@ -113,6 +144,39 @@ export default function AddListingAttributes() {
             </Pill>
           ))}
         </div>
+
+        {loadingAttrs && (
+          <div style={{ fontSize: 13, color: COLORS.inkSoft, marginTop: 24 }}>Yuklanmoqda...</div>
+        )}
+
+        {!loadingAttrs && attributeTypes.length > 0 && (
+          <div style={{ marginTop: 28 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: "#1A1A1A" }}>
+              Kategoriya xususiyatlari
+            </div>
+            {attributeTypes.map((t) => (
+              <div key={t.id} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 6 }}>{t.name}</div>
+                <input
+                  value={attributeValues[t.id] || ""}
+                  onChange={(e) => setAttrValue(t.id, e.target.value)}
+                  placeholder={t.name}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    background: COLORS.chipBg,
+                    border: "none",
+                    borderRadius: 14,
+                    padding: "14px 16px",
+                    fontSize: 15,
+                    outline: "none",
+                    color: "#1A1A1A",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div
