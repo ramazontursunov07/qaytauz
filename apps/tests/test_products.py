@@ -274,3 +274,18 @@ class ProductModerationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ProductAttributeValue.objects.filter(product=self.active).count(), 1)
         self.assertEqual(ProductAttributeValue.objects.get(product=self.active).value, 'Qizil')
+
+    def test_create_product_rejects_attribute_type_from_other_category(self):
+        self.client.force_authenticate(self.owner)
+        other_category = Category.objects.create(name="Boshqa kategoriya", slug="boshqa-kategoriya")
+        wrong_attr_type = AttributeType.objects.create(name="Noto'g'ri attribut", category=other_category)
+        url = reverse('product-create')
+        data = {
+            'title': 'Test mahsulot',
+            'description': 'x',
+            'price': 1000,
+            'category': self.category.id,
+            'attribute_values': [{'attribute_type': wrong_attr_type.id, 'value': 'test'}]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

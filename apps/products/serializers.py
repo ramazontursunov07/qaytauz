@@ -77,6 +77,20 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         fields = ['title', 'description', 'price', 'condition', 'category', 'region', 'extra_info',
                   'free_delivery', 'attribute_values']
 
+    def validate(self,attrs):
+        category = attrs.get('category')
+        attributes_data = attrs.get('attribute_values')
+        if attributes_data is not None:
+            if category is None:
+                raise serializers.ValidationError("Kategoriyani tanlang.")
+            valid_type_ids = set(AttributeType.objects.filter(category=category).values_list('id',flat=True))
+            for item in attributes_data:
+                attr_type = item.get('attribute_type')
+                if attr_type.id not in valid_type_ids:
+                    raise serializers.ValidationError("Bu attribut tanlangan kategoriyaga tegishli emas.")
+        return attrs
+
+
     def create(self, validated_data):
         attributes_data = validated_data.pop('attribute_values', [])
         validated_data['owner'] = self.context['request'].user
