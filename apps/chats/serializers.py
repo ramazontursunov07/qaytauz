@@ -52,7 +52,7 @@ class ChatSerializer(serializers.ModelSerializer):
         messages = list(obj.messages.all())
         if messages:
             last = messages[0]
-            return {'last':last.text,'sender':last.sender.username,'created_at':last.created_at}
+            return {'text':last.text,'sender':last.sender.username,'created_at':last.created_at}
         return None
 
 
